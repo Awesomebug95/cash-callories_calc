@@ -3,13 +3,15 @@ import datetime as dt
 
 class Record:
     """Here we create records."""
+    FORMAT = '%d.%m.%Y'
+
     def __init__(self, amount, comment, date=None):
         self.amount = amount
         self.comment = comment
         if date is None:
             self.date = dt.datetime.now().date()
         else:
-            self.date = dt.datetime.strptime(date, '%d.%m.%Y').date()
+            self.date = dt.datetime.strptime(date, self.FORMAT).date()
 
 
 class Calculator:
@@ -22,61 +24,56 @@ class Calculator:
         self.records.append(record)
 
     def get_today_stats(self):
-        cnt = 0
-        for x in self.records:
-            if x.date == dt.datetime.now().date():
-                cnt += x.amount
-        return cnt
-
-    def today_stats(self):
-        return self.limit - self.get_today_stats()
+        return sum(record.amount for record in self.records
+                   if record.date == dt.date.today())
 
     def get_week_stats(self):
-        week_cnt = 0
         today = dt.date.today()
         week_ago = today - dt.timedelta(days=7)
-        for x in self.records:
-            if week_ago <= x.date <= today:
-                week_cnt += x.amount
-        return week_cnt
+        return sum(record.amount for record in self.records
+                   if week_ago < record.date <= today)
 
 
 class CashCalculator(Calculator):
     """Here we counts money in 3 currencies."""
-    USD_RATE = 60.5
-    EURO_RATE = 70.1
+    USD_RATE = 60.0
+    EURO_RATE = 70.0
     RUB_RATE = 1
 
-    def __init__(self, limit):
-        super().__init__(limit)
+    CURRENCIES = {
+        'usd': ('USD', USD_RATE),
+        'eur': ('Euro', EURO_RATE),
+        'rub': ('руб', RUB_RATE)
+    }
+    ANSWER_ONE = ('На сегодня осталось {key_insert} {key_name}')
+    ANSWER_TWO = ('Денег нет, держись: твой долг - {key_insert} {key_name}')
+    ANSWER_THREE = 'Денег нет, держись'
     """Here we count the rest of  money."""
     def get_today_cash_remained(self, currency):
-        currencies = {
-            'usd': ('USD', self.USD_RATE),
-            'eur': ('Euro', self.EURO_RATE),
-            'rub': ('руб', self.RUB_RATE)
-        }
-
-        currency_name = currencies[currency][0]
-        currency_rate = currencies[currency][1]
+        name, rate = self.CURRENCIES[currency]
         remained_cash = self.limit - self.get_today_stats()
-        remained_cash_in_currency = round(remained_cash / currency_rate, 2)
+        remained_cash_in_currency = round(remained_cash / rate, 2)
 
         if remained_cash_in_currency > 0:
-            return (f'На сегодня осталось {remained_cash_in_currency}'
-                    f' {currency_name}')
-        elif remained_cash == 0:
-            return 'Денег нет, держись'
+            return self.ANSWER_ONE.format(key_insert=remained_cash_in_currency,
+                                          key_name=name)
+        elif remained_cash_in_currency < 0:
+            return self.ANSWER_TWO.format(
+                key_insert=abs(remained_cash_in_currency), key_name=name)
+        elif currency not in self.CURRENCIES:
+            return 'Error'
         else:
-            return (f'Денег нет, держись: твой долг -'
-                    f' {abs(remained_cash_in_currency)} {currency_name}')
+            return self.ANSWER_THREE
 
 
 class CaloriesCalculator(Calculator):
+
+    ANSWER_ONE = ('Сегодня можно съесть что-нибудь ещё, но с'
+                  ' общей калорийностью не более {key_to_insert} кКал')
+    ANSWER_TWO = 'Хватит есть!'
     """Here we calculate calories."""
     def get_calories_remained(self):
-        stats = super().today_stats()
+        stats = self.limit - self.get_today_stats()
         if stats > 0:
-            return (f'Сегодня можно съесть что-нибудь ещё, но с'
-                    f' общей калорийностью не более {stats} кКал')
-        return 'Хватит есть!'
+            return self.ANSWER_ONE.format(key_to_insert=stats)
+        return self.ANSWER_TWO
