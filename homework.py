@@ -2,7 +2,7 @@ import datetime as dt
 
 
 class Record:
-    """Here we create records."""
+
     FORMAT = '%d.%m.%Y'
 
     def __init__(self, amount, comment, date=None):
@@ -15,7 +15,9 @@ class Record:
 
 
 class Calculator:
-    """Here we count records."""
+
+    WEEK_DELTA = dt.timedelta(days=7)
+
     def __init__(self, limit):
         self.limit = limit
         self.records = []
@@ -24,18 +26,19 @@ class Calculator:
         self.records.append(record)
 
     def get_today_stats(self):
+        today = dt.date.today()
         return sum(record.amount for record in self.records
-                   if record.date == dt.date.today())
+                   if record.date == today)
 
     def get_week_stats(self):
         today = dt.date.today()
-        week_ago = today - dt.timedelta(days=7)
+        week_ago = today - self.WEEK_DELTA
         return sum(record.amount for record in self.records
                    if week_ago < record.date <= today)
 
 
 class CashCalculator(Calculator):
-    """Here we counts money in 3 currencies."""
+
     USD_RATE = 60.0
     EURO_RATE = 70.0
     RUB_RATE = 1
@@ -45,35 +48,37 @@ class CashCalculator(Calculator):
         'eur': ('Euro', EURO_RATE),
         'rub': ('руб', RUB_RATE)
     }
-    ANSWER_ONE = ('На сегодня осталось {key_insert} {key_name}')
-    ANSWER_TWO = ('Денег нет, держись: твой долг - {key_insert} {key_name}')
-    ANSWER_THREE = 'Денег нет, держись'
-    """Here we count the rest of  money."""
+    MONEY_LEFT = ('На сегодня осталось {balance} {currency_name}')
+    OWES_MONEY = ('Денег нет, держись: твой долг - {amount_debt} '
+                  '{currency_name}')
+    NO_MONEY_LEFT = 'Денег нет, держись'
+    CURRENCY_ERROR = 'WRONG CURRENCY'
+
     def get_today_cash_remained(self, currency):
-        name, rate = self.CURRENCIES[currency]
+        try:
+            name, rate = self.CURRENCIES[currency]
+        except KeyError:
+            raise ValueError(self.CURRENCY_ERROR)
         remained_cash = self.limit - self.get_today_stats()
         remained_cash_in_currency = round(remained_cash / rate, 2)
 
         if remained_cash_in_currency > 0:
-            return self.ANSWER_ONE.format(key_insert=remained_cash_in_currency,
-                                          key_name=name)
-        elif remained_cash_in_currency < 0:
-            return self.ANSWER_TWO.format(
-                key_insert=abs(remained_cash_in_currency), key_name=name)
-        elif currency not in self.CURRENCIES:
-            return 'Error'
-        else:
-            return self.ANSWER_THREE
+            return self.MONEY_LEFT.format(balance=remained_cash_in_currency,
+                                          currency_name=name)
+        if remained_cash_in_currency < 0:
+            return self.OWES_MONEY.format(
+                amount_debt=abs(remained_cash_in_currency), currency_name=name)
+        return self.NO_MONEY_LEFT
 
 
 class CaloriesCalculator(Calculator):
 
-    ANSWER_ONE = ('Сегодня можно съесть что-нибудь ещё, но с'
-                  ' общей калорийностью не более {key_to_insert} кКал')
-    ANSWER_TWO = 'Хватит есть!'
-    """Here we calculate calories."""
+    CAN_EAT = ('Сегодня можно съесть что-нибудь ещё, но с'
+               ' общей калорийностью не более {sum} кКал')
+    CANT_EAT = 'Хватит есть!'
+
     def get_calories_remained(self):
         stats = self.limit - self.get_today_stats()
         if stats > 0:
-            return self.ANSWER_ONE.format(key_to_insert=stats)
-        return self.ANSWER_TWO
+            return self.CAN_EAT.format(sum=stats)
+        return self.CANT_EAT
