@@ -52,23 +52,24 @@ class CashCalculator(Calculator):
     OWES_MONEY = ('Денег нет, держись: твой долг - {amount_debt} '
                   '{currency_name}')
     NO_MONEY_LEFT = 'Денег нет, держись'
-    CURRENCY_ERROR = 'WRONG CURRENCY'
+    INCORRECT_CURRENCY_ENTERED = ('Программа принимает только валюты:'
+                                  ' usd, eur, rub')
 
     def get_today_cash_remained(self, currency):
         try:
             name, rate = self.CURRENCIES[currency]
         except KeyError:
-            raise ValueError(self.CURRENCY_ERROR)
+            raise ValueError(self.INCORRECT_CURRENCY_ENTERED)
         remained_cash = self.limit - self.get_today_stats()
         remained_cash_in_currency = round(remained_cash / rate, 2)
-
+        if remained_cash == 0:
+            return self.NO_MONEY_LEFT
         if remained_cash_in_currency > 0:
             return self.MONEY_LEFT.format(balance=remained_cash_in_currency,
                                           currency_name=name)
         if remained_cash_in_currency < 0:
             return self.OWES_MONEY.format(
                 amount_debt=abs(remained_cash_in_currency), currency_name=name)
-        return self.NO_MONEY_LEFT
 
 
 class CaloriesCalculator(Calculator):
