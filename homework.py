@@ -52,15 +52,14 @@ class CashCalculator(Calculator):
     OWES_MONEY = ('Денег нет, держись: твой долг - {amount_debt} '
                   '{currency_name}')
     NO_MONEY_LEFT = 'Денег нет, держись'
-    INCORRECT_CURRENCY_ENTERED = ('Введена некорректная валюта. Программа'
-                                  ' принимает только валюты:{currency}')
+    INCORRECT_CURRENCY_ENTERED = ('Введена некорректная валюта: {currency}')
 
     def get_today_cash_remained(self, currency):
         try:
             name, rate = self.CURRENCIES[currency]
         except KeyError:
             raise ValueError(self.INCORRECT_CURRENCY_ENTERED.format(
-                             currency=self.CURRENCIES.keys()))
+                             currency=currency))
         remained_cash = self.limit - self.get_today_stats()
         if remained_cash == 0:
             return self.NO_MONEY_LEFT
